@@ -1,0 +1,140 @@
+####Basic Configuration###
+R1
+---------
+enable
+show ip interface brief
+conf t
+Hostname r1 
+ip address 209.165.200.225 255.255.255.248
+no shutdown
+exit
+interface serial0/1/0
+ip address 10.1.1.1 255.255.255.252
+no shutdown
+clock rate 64000
+exit
+ 
+R3
+----------
+enable
+show ip interface brief
+conf t 
+ip address 172.16.3.1 255.255.255.0
+no shutdown
+exit
+interface serial0/1/1
+ip address 10.2.2.1 255.255.255.252
+no shutdown
+exit
+
+#### Static Default Route ##########
+R1
+------
+Enable
+Conf t 
+ip route 0.0.0.0 0.0.0.0 Serial 0/1/0
+Exit 
+
+R3 
+--------
+Enable 
+Conf t 
+ip route 0.0.0.0 0.0.0.0 Serial 0/1/1
+Exit
+
+
+####Static Route ######
+R1
+------
+ip route 209.165.200.224 255.255.255.248 Serial0/1/0
+
+R3
+----
+ip route 172.16.3.0 255.255.255.0 Serial0/1/1 
+
+
+#######Set up Ntp server #########
+R1
+------
+Conf t
+ntp authentication-key 1 md5 myPassword
+ntp trusted-key 1
+ntp authenticate
+ntp master 3
+
+########Spanning-tree switch root###########
+S1
+-------
+spanning-tree vlan 1 root primary 
+S2
+--------
+spanning-tree vlan 1 root secondary
+
+S1
+----
+Show spanning-tree
+
+#########Shutdown unused ports########
+S1
+---
+Conf t 
+Interface range “ports that are not used “f0/2-4
+Shutdown 
+
+##########ping#####
+Ping r1 ..
+
+######### Set Password Minimum Length #########
+security passwords min-length 10
+
+########## Assign and Encrypt Exec password ##########
+enable algorithm-type scrypt secret cisco12345
+
+####### Add user create pass for admin access ############
+Username admin01 privilege 15 algorithm-type scrypt secret admin01pass
+
+############### MOTD banner ######################
+banner motd $Unauthorized Access is Prohibited! $
+
+###########Disable HTTP Server #######################
+no ip http server
+no ip http secure-server
+
+########### Configure SSH ######################
+DOMAIN NAME -       ip domain-name ccnasecurity.com
+RSA KEY LENGTH -    crypto key generate rsa general-keys modulus 1024
+V2                         -       ip ssh version 2
+TIMEOUT             -       ip ssh time-out 90
+RETRIES                -       ip ssh authentication-retries 2
+
+########### VTY SSH ALLOW ###################
+R1(config)# line vty 0 4
+R1(config-line)# privilege level 15
+R1(config-line)# login local
+R1(config-line)# transport input ssh
+R1(config-line)# exit
+
+
+##############ENABLE AAA ##################
+R1(config)# aaa new-model
+R1(config)# aaa authentication login default local
+R1(config)# aaa authorization exec default local
+
+############### CONFIGURE NTP ###############
+ntp authentication-key 1 md5 NTPpassword
+ntp trusted-key 1
+ntp authenticate
+ntp server 209.165.200.233
+ntp update-calendar
+
+################# Config Syslog ##############
+TIMESTAMPS - service timestamps log datetime msec
+LOGIN HOST   - logging host 172.30.3.3
+SEVERITY        - logging trap warnings
+
+
+
+
+
+
+
